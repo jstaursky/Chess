@@ -69,17 +69,18 @@ if (WIN32)
         "src/Platform/Windows/WindowsEngine.cpp"
         "src/Platform/Windows/WindowsFileDialog.cpp"
     )
-
     add_executable(${PROJECT_NAME} WIN32 ${SOURCES})
+
 elseif (UNIX)
     set(SOURCES
         ${SOURCES}
         "src/Platform/Unix/UnixEngine.h"
         "src/Platform/Unix/UnixEngine.cpp"
         "src/Platform/Unix/UnixFileDialog.cpp"
+        "dependencies/ImGuiFileDialog/ImGuiFileDialog.cpp"
     )
-
     add_executable(${PROJECT_NAME} ${SOURCES})
+
 else()
     message(FATAL_ERROR "Unsupported platform!")
 endif()
@@ -122,4 +123,5 @@ target_include_directories(${PROJECT_NAME}
     "dependencies/stb_image/"
     "dependencies/glm/"
     "dependencies/imgui/"
+    "dependencies/"
 )

@@ -1,21 +1,27 @@
 #include "Utility/FileDialog.h"
 
-#if defined (OS_LINUX)
+#include <vector>
+#include <iostream>
+
 #include <unistd.h>
 #include <linux/limits.h>
-#endif
 
-#include <vector>
+#include "ImGuiFileDialog/ImGuiFileDialog.h"
 
 namespace FileDialog {
 
+
 std::string Open()
 {
+    ImGuiFileDialog::Instance()->OpenDialog ("ChooseFileDlgKey", "Choose File", ".*", ".");
     return "";
 }
 
 std::string Open (char *buffer, size_t size)
 {
+    // ImGui::OpenPopup ("Choose File");
+    // ImGuiFileDialog::Instance()->OpenDialog ("ChooseFileDialogKey", "Choose File", "*", ".");
+
     return "";
 
 }

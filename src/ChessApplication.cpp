@@ -21,6 +21,14 @@
 
 #include <sstream>
 
+#if defined(OS_LINUX)
+
+#include "ImGuiFileDialog/ImGuiFileDialog.h"
+
+#endif
+
+
+
 static glm::vec4 HexToColour (uint32_t colour)
 {
     static constexpr float normalise = 1.0f / 255.0f;
@@ -362,69 +370,30 @@ void ChessApplication::RenderImGui()
         ImGui::PopStyleVar (2);
     }
 
+
     if (s_ShowEngineWindow) {
-        ImGui::Begin ("Engine", &s_ShowEngineWindow);
-
         static auto s_SelectedEngine = m_Engines.end();
+        static bool s_EnginesInitialized = false;
 
-        if (s_SelectedEngine == m_Engines.end()) {
+        ImGui::Begin ("Engine", &s_ShowEngineWindow);
+        if (m_Engines.empty()) {
             if (ImGui::Button ("Create engine")) {
-                ImGui::OpenPopup ("Create engine");
+                // Place window into center
+                ImVec2 centre = ImGui::GetMainViewport()->GetCenter();
+                ImGui::SetNextWindowPos (centre, ImGuiCond_Appearing, ImVec2 (0.5f, 0.5f));
+                ImGuiFileDialog::Instance()->OpenDialog ("ChooseEngineFile", "Choose Engine", ".*", ".");
             }
 
-#define GetCentre GetCenter
-
-            // Always centre this window when appearing
-            ImVec2 centre = ImGui::GetMainViewport()->GetCentre();
-            ImGui::SetNextWindowPos (centre, ImGuiCond_Appearing, ImVec2 (0.5f, 0.5f));
-
-            if (ImGui::BeginPopupModal ("Create engine", nullptr, ImGuiWindowFlags_None)) {
-                static char path[255] = { 0 };
-                static char name[64] = { 0 };
-
-                ImGui::InputText ("path", path, sizeof (path));
-                if (ImGui::Button ("Select executable")) {
-                    FileDialog::Open (path, sizeof (path));
-
-                    // If the 'name' field is empty, copy the executable name to it
-                    if (name[0] == '\0')
-                        strncpy (name, std::filesystem::path (path).stem().u8string().c_str(),  sizeof (name));
-                }
-
-                ImGui::InputText ("name", name, sizeof (name));
-
-                if (ImGui::Button ("OK", ImVec2 (120, 0))) {
-                    m_Engines.emplace_back (std::pair{ name, path });
-                    s_SelectedEngine = m_Engines.end();
-
-                    // "Reset" the strings for next time popup is opened
-                    path[0] = '\0';
-                    name[0] = '\0';
-                    ImGui::CloseCurrentPopup();
-                }
-
-                ImGui::SameLine();
-
-                if (ImGui::Button ("Cancel", ImVec2 (120, 0))) {
-                    // "Reset" the strings for next time popup is opened
-                    path[0] = '\0';
-                    name[0] = '\0';
-                    ImGui::CloseCurrentPopup();
-                }
-
-                ImGui::EndPopup();
-            }
+        } else if (!s_EnginesInitialized) {
 
             for (auto it = m_Engines.begin(); it != m_Engines.end();) {
                 const std::string &name = it->first;
                 const std::filesystem::path &path = it->second;
 
                 ImGui::Separator();
-
                 ImGui::Text ("%s", name.c_str());
 
                 ImGui::PushID ((int)std::distance (m_Engines.begin(), it));
-
                 if (ImGui::Button ("Start engine")) {
                     ImGui::PopID();
 
@@ -436,11 +405,13 @@ void ChessApplication::RenderImGui()
                         m_RunningEngine->Run();
 
                         s_SelectedEngine = it;
+                        s_EnginesInitialized = true;
                     } catch (EngineCreationFailure &) {
                         ImGui::OpenPopup ("Failed to create engine");
                     } catch (EngineNotReady &) {
                         ImGui::OpenPopup ("Engine not ready");
                     }
+
                 } else {
                     ImGui::PopID();
                 }
@@ -452,9 +423,9 @@ void ChessApplication::RenderImGui()
                     ++it;
                 }
             }
-
             ImGui::Separator();
         } else {
+
             if (m_RunningEngine->GetThreadException() != nullptr) {
                 std::rethrow_exception (m_RunningEngine->GetThreadException());
             }
@@ -484,27 +455,39 @@ void ChessApplication::RenderImGui()
             }
         }
 
-        // TODO: ImGui Error message wrapper?
-        ImVec2 centre = ImGui::GetMainViewport()->GetCentre();
-        ImGui::SetNextWindowPos (centre, ImGuiCond_Appearing, ImVec2 (0.5f, 0.5f));
+//         // TODO: ImGui Error message wrapper?
+//         ImVec2 centre = ImGui::GetMainViewport()->GetCentre();
+//         ImGui::SetNextWindowPos (centre, ImGuiCond_Appearing, ImVec2 (0.5f, 0.5f));
 
-        if (ImGui::BeginPopupModal ("Failed to create engine")) {
-            if (ImGui::Button ("OK"))
-                ImGui::CloseCurrentPopup();
-            ImGui::EndPopup();
-        }
+//         if (ImGui::BeginPopupModal ("Failed to create engine")) {
+//             if (ImGui::Button ("OK"))
+//                 ImGui::CloseCurrentPopup();
+//             ImGui::EndPopup();
+//         }
 
-        centre = ImGui::GetMainViewport()->GetCentre();
-        ImGui::SetNextWindowPos (centre, ImGuiCond_Appearing, ImVec2 (0.5f, 0.5f));
+//         centre = ImGui::GetMainViewport()->GetCentre();
+//         ImGui::SetNextWindowPos (centre, ImGuiCond_Appearing, ImVec2 (0.5f, 0.5f));
 
-        if (ImGui::BeginPopupModal ("Engine not ready")) {
-            if (ImGui::Button ("OK"))
-                ImGui::CloseCurrentPopup();
-            ImGui::EndPopup();
-        }
+//         if (ImGui::BeginPopupModal ("Engine not ready")) {
+//             if (ImGui::Button ("OK"))
+//                 ImGui::CloseCurrentPopup();
+//             ImGui::EndPopup();
+//         }
 
         ImGui::End();
     }
+
+    // PERFORM FILE HANDLING LOGIC (MUST DO THIS AFTER ImGui::End() otherwise window will not close.)
+    if (ImGuiFileDialog::Instance()->Display ("ChooseEngineFile")) {
+
+        if (ImGuiFileDialog::Instance()->IsOk()) {
+            std::string engine_path = ImGuiFileDialog::Instance()->GetFilePathName();
+            std::string name = std::filesystem::path (engine_path).stem().u8string().c_str();
+            m_Engines.emplace_back (std::pair{ name, engine_path });
+        }
+        ImGuiFileDialog::Instance()->Close();
+    }
+
 }
 
 void ChessApplication::OnWindowClose()
