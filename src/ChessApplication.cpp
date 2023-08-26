@@ -381,7 +381,8 @@ void ChessApplication::RenderImGui()
                 // Place window into center
                 ImVec2 centre = ImGui::GetMainViewport()->GetCenter();
                 ImGui::SetNextWindowPos (centre, ImGuiCond_Appearing, ImVec2 (0.5f, 0.5f));
-                ImGuiFileDialog::Instance()->OpenDialog ("ChooseEngineFile", "Choose Engine", ".*", ".");
+                ImGui::SetNextWindowSize (ImVec2 (800, 400));
+                ImGuiFileDialog::Instance()->OpenDialog ("ChooseEngineFile", "Choose Engine", "((.+))", ".");
             }
 
         } else if (!s_EnginesInitialized) {
